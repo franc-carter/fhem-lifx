@@ -28,8 +28,12 @@ sub LIFXBulb_Parse($$)
     my ($hash, $msg) = @_;
 
     if ($msg->type() == LIGHT_STATUS) {
-        my $label           = $msg->label();
-        my $bulb_hash       = $modules{LIFXBulb}{defptr}{$label};
+        my $label = $msg->label();
+        my $bulb_hash = $modules{LIFXBulb}{defptr}{$label};
+        if (!defined($bulb_hash)) {
+            my $mac    = $msg->bulb_mac();
+            $bulb_hash = $modules{LIFXBulb}{defptr}{$mac};
+        }
         $bulb_hash->{STATE} = ($msg->power()) ? "on" : "off";
 
         DoTrigger($bulb_hash->{NAME}, $bulb_hash->{STATE});
@@ -44,6 +48,12 @@ sub LIFXBulb_Define($$)
     my ($name, $type, $id) = split(' ', $def);
     if (!defined($id)) {
         return "Usage: <NAME> LIFXBulb <XX:XX:XX:XX:XX:XX>|Label"
+    }
+
+    my @mac = split(':',$id);
+    if ($#mac == 5) {
+        @mac = map {hex($_)} @mac;
+        $id = pack('C*', @mac);
     }
 
     $hash->{STATE} = 'Initialized';
@@ -78,6 +88,9 @@ sub LIFXBulb_Set($@)
     my $lifx = $hash->{IODev}->{lifx}{lifx};
     my $id   = $hash->{ID};
     my $bulb = $lifx->get_bulb_by_label($id);
+    if (!defined($bulb)) {
+        $bulb = $lifx->get_bulb_by_mac($id);
+    }
 
     if ($args[0] eq 'on') {
         $bulb->on();
