@@ -7,6 +7,7 @@ use POSIX;
 use Device::LIFX;
 use Device::LIFX::Constants qw(LIGHT_STATUS);
 use SetExtensions;
+use Color;
 use Data::Dumper;
 
 sub LIFXBulb_Initialize($)
@@ -19,26 +20,19 @@ sub LIFXBulb_Initialize($)
     $hash->{ParseFn}  = "LIFXBulb_Parse";
     $hash->{AttrList} = "IODev ". $readingFnAttributes;
 
+    FHEM_colorpickerInit();
 }
 
 sub LIFXBulb_Parse($$)
 {
     my ($hash, $msg) = @_;
 
-    if ($msg->{packet_type} == LIGHT_STATUS) {
-        my $status    = $msg->{status};
-        my $id        = $status->{label};
-        my $bulb_hash = $modules{LIFXBulb}{defptr}{$id};
+    if ($msg->type() == LIGHT_STATUS) {
+        my $label           = $msg->label();
+        my $bulb_hash       = $modules{LIFXBulb}{defptr}{$label};
+        $bulb_hash->{STATE} = ($msg->power()) ? "on" : "off";
 
-        $bulb_hash->{STATE} = ($status->{power}) ? "on" : "off";
-
-         readingsBeginUpdate($bulb_hash);
-         readingsBulkUpdate($bulb_hash,"brightness",$status->{brightness});
-         readingsBulkUpdate($bulb_hash,"kelvin",$status->{kelvin});
-         readingsBulkUpdate($bulb_hash,"hue",$status->{hue});
-         readingsBulkUpdate($bulb_hash,"saturation",$status->{saturation});
-
-        DoTrigger($bulb_hash->{NAME}, $msg->{STATE});
+        DoTrigger($bulb_hash->{NAME}, $bulb_hash->{STATE});
     }
     return undef;
 }
@@ -54,6 +48,7 @@ sub LIFXBulb_Define($$)
 
     $hash->{STATE} = 'Initialized';
     $hash->{ID}    = $id;
+    $hash->{NAME}  = $name;
 
     AssignIoPort($hash);
     if(defined($hash->{IODev}->{NAME})) {
@@ -93,9 +88,13 @@ sub LIFXBulb_Set($@)
     } elsif ($args[0] eq 'color') {
         my ($b,$k,$h,$s,$t) = @args[1 .. $#args];
         $bulb->color([$h,$s,$b,$k], $t);
+    } elsif ($args[0] eq 'rgb') {
+        my ($r,$g,$b) = ($args[1] =~ m/(..)(..)(..)/);
+        ($r,$g,$b)    = map {hex($_)} ($r,$g,$b);
+        $bulb->rgb([$r,$g,$b], 0);
     }
     else {
-        return "off:noArg on:noArg toggle:noArg";
+        return "off:noArg on:noArg toggle:noArg rgb:colorpicker,RGB color:slider,2000,1,6500";
     }
     return undef;
 }

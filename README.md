@@ -1,7 +1,7 @@
 fhem-lifx
 =========
 
-An fhem driver for the LIFX Light Bulbs
+An fhem driver for the LIFX Light Bulbs, you will need https://github.com/franc-carter/perl-lifx
 
 The driver is split in two pieces, a Bridge that does the network communication between fhem and the Bulbs and a Bulb which represents the device specific information.
 
