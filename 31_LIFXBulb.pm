@@ -101,13 +101,18 @@ sub LIFXBulb_Set($@)
     } elsif ($args[0] eq 'color') {
         my ($b,$k,$h,$s,$t) = @args[1 .. $#args];
         $bulb->color([$h,$s,$b,$k], $t);
+    } elsif ($args[0] eq 'kelvin') {
+        my $color = $bulb->color();
+        my $k     = $args[1];
+        my $t     = $args[2] | 0;
+        $bulb->color([0,0,$color->[2],$k], $t);
     } elsif ($args[0] eq 'rgb') {
         my ($r,$g,$b) = ($args[1] =~ m/(..)(..)(..)/);
         ($r,$g,$b)    = map {hex($_)} ($r,$g,$b);
         $bulb->rgb([$r,$g,$b], 0);
     }
     else {
-        return "off:noArg on:noArg toggle:noArg rgb:colorpicker,RGB color:slider,2000,1,6500";
+        return "off:noArg on:noArg toggle:noArg rgb:colorpicker,RGB kelvin:slider,2500,1,7000";
     }
     return undef;
 }
