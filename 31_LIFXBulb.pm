@@ -20,12 +20,11 @@ sub LIFXBulb_Initialize($)
     my ($hash) = @_;
 
     $hash->{DefFn}    = "LIFXBulb_Define";
-    $hash->{GetFn}    = "LIFXBulb_Get";
     $hash->{SetFn}    = "LIFXBulb_Set";
     $hash->{Match}    = ".*";
     $hash->{ParseFn}  = "LIFXBulb_Parse";
     $hash->{AttrList} = "IODev ".
- 						"COLOR ".$readingFnAttributes;
+ 						"color ".$readingFnAttributes;
 
     FHEM_colorpickerInit();
 }
@@ -45,16 +44,22 @@ sub LIFXBulb_Parse($$)
 		my $color = $msg->color();
 	
         readingsBeginUpdate($bulb_hash);
-		readingsBulkUpdate($bulb_hash, "HUE", $color->[0], 1);
-		readingsBulkUpdate($bulb_hash, "SATURATION", $color->[1], 1);
-		readingsBulkUpdate($bulb_hash, "BRIGHTNESS", $color->[2], 1);
-		
+		readingsBulkUpdate($bulb_hash, "hue", $color->[0], 1);
+		readingsBulkUpdate($bulb_hash, "saturation", $color->[1], 1);
+		readingsBulkUpdate($bulb_hash, "brightness", $color->[2], 1);
+		my $hue = $color->[0]/65535*360;
+		my $saturation = $color->[1]/100;
+		my $brightness = $color->[2]/100;
 		my $hsv = Imager::Color->new(
-		    hsv     =>  [ ($color->[0]/65535*360), ($color->[2]/100), ($color->[1]/100) ]     #   hue, v, s
+		    hsv=>[$hue, $saturation, $brightness]    
 		);
 		my @rgb = $hsv->rgba;
-		readingsBulkUpdate($bulb_hash, "COLOR", sprintf("%02X%02X%02X", $rgb[0], $rgb[1], $rgb[2]), 1);
-		readingsBulkUpdate($bulb_hash, "KELVIN", $color->[3], 1);
+		readingsBulkUpdate($bulb_hash, "red", sprintf("%d", $rgb[0]), 1);
+		readingsBulkUpdate($bulb_hash, "green", sprintf("%d", $rgb[1]), 1);
+		readingsBulkUpdate($bulb_hash, "blue", sprintf("%d", $rgb[2]), 1);
+		
+		readingsBulkUpdate($bulb_hash, "color", sprintf("%02X%02X%02X", $rgb[0], $rgb[1], $rgb[2]), 1);
+		readingsBulkUpdate($bulb_hash, "kelvin", $color->[3], 1);
         readingsEndUpdate($bulb_hash,1);
 
         DoTrigger($bulb_hash->{NAME}, $bulb_hash->{STATE}, $bulb_hash->{READINGS});
@@ -119,19 +124,19 @@ sub LIFXBulb_Set($@)
     } elsif ($args[0] eq 'off') {
         $bulb->off();
         $hash->{STATE} = 'off';
-    } elsif ($args[0] eq 'COLOR') {
+    } elsif ($args[0] eq 'color') {
         my ($color,$t) = @args[1 .. $#args];
 		my $hsv = Imager::Color->new("#".$color);
 		my ($h, $s, $b) = $hsv->hsv();
-		print Dumper($h, $b, $s);
+		print Dumper($h/360*65535, $b*100, $s*100);
 		
-        $bulb->color([$h,$s*100,$b*100,0], $t);
-    } elsif ($args[0] eq 'KELVIN') {
+        $bulb->color([sprintf("%d", $h/360*65535),sprintf("%d", $s*100), sprintf( "%d", $b*100),0], $t);
+    } elsif ($args[0] eq 'kelvin') {
         my $color = $bulb->color();
         my $k     = $args[1];
         my $t     = $args[2] | 0;
         $bulb->color([0,0,$color->[2],$k], $t);
-    } 	elsif ($args[0] eq 'BRIGHTNESS') {
+    } 	elsif ($args[0] eq 'brightness') {
 	        my $color = $bulb->color();
 	        my $t     = $args[2] | 1;
 	
@@ -142,24 +147,9 @@ sub LIFXBulb_Set($@)
         $bulb->rgb([$r,$g,$b], 0);
     }
     else {
-        return "off:noArg on:noArg toggle:noArg COLOR:colorpicker,RGB BRIGHTNESS:slider,0,1,100 KELVIN:slider,2500,1,7000";
+        return "off:noArg on:noArg toggle:noArg color:colorpicker,RGB brightness:slider,0,1,100 kelvin:slider,2500,1,7000";
     }
     return undef;
-}
-
-sub LIFXBulb_Get($@)
-{
-	my ($hash, @a) = @_;
-
-	  my $name = $a[0];
-	  return "$name: get needs at least one parameter" if(@a < 2);
-
-	  my $cmd= $a[1];
-	if(!$LIFXBulb_gets{$cmd}) {
-			my @cList = keys %LIFXBulb_gets;
-			return "Unknown argument $cmd, choose one of " . join(" ", @cList);
-		}
-    
 }
 
 1;
