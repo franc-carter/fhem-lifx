@@ -27,18 +27,18 @@ sub LIFXBulb_Parse($$)
 {
     my ($hash, $msg) = @_;
 
+    my $label = $msg->label();
+    my $bulb_hash = $modules{LIFXBulb}{defptr}{$label};
+    if (!defined($bulb_hash)) {
+        my $mac    = $msg->bulb_mac();
+        $bulb_hash = $modules{LIFXBulb}{defptr}{$mac};
+    }
     if ($msg->type() == LIGHT_STATUS) {
-        my $label = $msg->label();
-        my $bulb_hash = $modules{LIFXBulb}{defptr}{$label};
-        if (!defined($bulb_hash)) {
-            my $mac    = $msg->bulb_mac();
-            $bulb_hash = $modules{LIFXBulb}{defptr}{$mac};
-        }
         $bulb_hash->{STATE} = ($msg->power()) ? "on" : "off";
 
         DoTrigger($bulb_hash->{NAME}, $bulb_hash->{STATE});
     }
-    return undef;
+    return $bulb_hash->{NAME} || $hash->{NAME};
 }
 
 sub LIFXBulb_Define($$)
@@ -90,6 +90,8 @@ sub LIFXBulb_Set($@)
     my $bulb = $lifx->get_bulb_by_label($id);
     if (!defined($bulb)) {
         $bulb = $lifx->get_bulb_by_mac($id);
+        defined($bulb) ||
+            return "Can't find bulb with id: $id";
     }
 
     if ($args[0] eq 'on') {
