@@ -1,4 +1,3 @@
-
 package main;
 
 use strict;
@@ -71,4 +70,3 @@ sub LIFXBridge_Read($)
 }
 
 1;
-
