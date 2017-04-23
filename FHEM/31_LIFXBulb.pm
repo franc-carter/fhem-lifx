@@ -1,4 +1,3 @@
-
 package main;
 
 use strict;
@@ -117,6 +116,9 @@ sub LIFXBulb_Set($@)
     if (!defined($bulb)) {
         $bulb = $lifx->get_bulb_by_mac($id);
     }
+	if (!defined($bulb)) {
+		return undef;
+	}
 
     if ($args[0] eq 'on') {
         $bulb->on();
@@ -153,4 +155,3 @@ sub LIFXBulb_Set($@)
 }
 
 1;
-
